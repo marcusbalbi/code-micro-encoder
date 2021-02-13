@@ -6,7 +6,7 @@ import (
 	"github.com/asaskevich/govalidator"
 )
 
-// Video Entidade Principal do Nosso sistema
+// Video Entidade Principal do Nosso sistema para o Video
 type Video struct {
 	ID         string    `valid:"uuid"`
 	ResourceID string    `valid:"notnull"`
