@@ -1,15 +1,17 @@
 package domain
 
 import (
-	"github.com/asaskevich/govalidator"
 	"time"
+
+	"github.com/asaskevich/govalidator"
 )
 
+// Video Entidade Principal do Nosso sistema
 type Video struct {
 	ID         string    `valid:"uuid"`
 	ResourceID string    `valid:"notnull"`
 	FilePath   string    `valid:"notnull"`
-	CreatedAt  time.Time `valid:"~"`
+	CreatedAt  time.Time `valid:"-"`
 }
 
 func init() {
