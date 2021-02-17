@@ -16,7 +16,7 @@ import (
 //VideoService to manpulate Videos Downloads
 type VideoService struct {
 	Video           *domain.Video
-	VideoRepository *repositories.VideoRepository
+	VideoRepository repositories.VideoRepository
 }
 
 //NewVideoService return a new videoService
