@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 
 	"cloud.google.com/go/storage"
 )
@@ -61,4 +62,31 @@ func (v VideoService) Download(bucketName string) error {
 	}
 	log.Printf("Video %v has been stored", v.Video.ID)
 	return nil
+}
+
+//Fragment Fragmenta o Video
+func (v VideoService) Fragment() error {
+	err := os.Mkdir(os.Getenv("localstoragepath")+"/"+v.Video.ID, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	source := os.Getenv("localstoragepath") + "/" + v.Video.ID + ".mp4"
+	target := os.Getenv("localstoragepath") + "/" + v.Video.ID + ".frag"
+
+	cmd := exec.Command("mp4fragment", source, target)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return err
+	}
+
+	PrintOutput(output)
+
+	return nil
+}
+
+//PrintOutput Exibe no console o resultado de um output caso exista
+func PrintOutput(out []byte) {
+	if len(out) > 0 {
+		log.Printf("========> Output: %s\n", string(out))
+	}
 }
