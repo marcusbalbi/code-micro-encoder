@@ -84,6 +84,7 @@ func (v VideoService) Fragment() error {
 	return nil
 }
 
+//Encode Encode a video
 func (v VideoService) Encode() error {
 	cmdArgs := []string{}
 
@@ -107,6 +108,7 @@ func (v VideoService) Encode() error {
 	return nil
 }
 
+//Finish Clean everything
 func (v VideoService) Finish() error {
 	err := os.Remove(os.Getenv("localstoragepath") + "/" + v.Video.ID + ".mp4")
 	if err != nil {
