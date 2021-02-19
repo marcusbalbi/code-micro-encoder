@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -26,7 +27,7 @@ func NewVideoUpload() *VideoUpload {
 }
 
 //UploadObject teste
-func (vu VideoUpload) UploadObject(ctx context.Context, objectPath string, client *storage.Client) error {
+func (vu *VideoUpload) UploadObject(ctx context.Context, objectPath string, client *storage.Client) error {
 	path := strings.Split(objectPath, os.Getenv("localstoragepath")+"/")
 
 	f, err := os.Open(objectPath)
@@ -52,9 +53,8 @@ func (vu VideoUpload) UploadObject(ctx context.Context, objectPath string, clien
 	return nil
 }
 
-func (vu VideoUpload) loadPaths() error {
+func (vu *VideoUpload) loadPaths() error {
 	err := filepath.Walk(vu.VideoPath, func(path string, info os.FileInfo, err error) error {
-
 		if !info.IsDir() {
 			vu.Paths = append(vu.Paths, path)
 		}
@@ -68,10 +68,10 @@ func (vu VideoUpload) loadPaths() error {
 }
 
 //ProcessUpload process an upload
-func (vu VideoUpload) ProcessUpload(concurency int, doneUpload chan string) error {
+func (vu *VideoUpload) ProcessUpload(concurency int, doneUpload chan string) error {
 	in := make(chan int, runtime.NumCPU())
 	returnChannel := make(chan string)
-
+	fmt.Print(vu)
 	err := vu.loadPaths()
 	if err != nil {
 		return err
