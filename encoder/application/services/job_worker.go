@@ -18,7 +18,8 @@ type JobWorkerResult struct {
 	Error   error
 }
 
-func JobWorker(messageChannel chan amqp.Delivery, returnChannel chan JobWorkerResult, jobService jobService, job domain.Job, workerID int) {
+// JobWorker creates jobservices to prepare videos
+func JobWorker(messageChannel chan amqp.Delivery, returnChannel chan JobWorkerResult, jobService JobService, job domain.Job, workerID int) {
 
 	for message := range messageChannel {
 		err := utils.IsJSON(string(message.Body))
@@ -40,7 +41,7 @@ func JobWorker(messageChannel chan amqp.Delivery, returnChannel chan JobWorkerRe
 			continue
 		}
 
-		err = jobService.VideoService.Video.InsertVideo()
+		err = jobService.VideoService.InsertVideo()
 		if err != nil {
 			returnChannel <- returnJobResult(domain.Job{}, message, err)
 			continue
@@ -59,7 +60,7 @@ func JobWorker(messageChannel chan amqp.Delivery, returnChannel chan JobWorkerRe
 		}
 
 		jobService.Job = &job
-		err = jobService.start()
+		err = jobService.Start()
 		if err != nil {
 			returnChannel <- returnJobResult(domain.Job{}, message, err)
 			continue

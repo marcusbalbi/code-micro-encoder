@@ -13,6 +13,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
+//JobManager Controls the JobWorkers to encode videos from queue
 type JobManager struct {
 	Db               *gorm.DB
 	Domain           domain.Job
@@ -21,11 +22,13 @@ type JobManager struct {
 	RabbitMQ         *queue.RabbitMQ
 }
 
+//JobNotificationError Message Type
 type JobNotificationError struct {
 	Message string `json:"message"`
 	Error   string `json:"error"`
 }
 
+//NewJobManager Creates a new Job Manager
 func NewJobManager(db *gorm.DB, rabbitMQ *queue.RabbitMQ, jobReturnChannel chan JobWorkerResult, messageChannel chan amqp.Delivery) *JobManager {
 
 	return &JobManager{
@@ -71,7 +74,7 @@ func (j *JobManager) start(ch chan *amqp.Channel) {
 
 }
 
-func (j *JobManager) notifySuccess(jobResult JobWorkerResult, ch *amqp.Channel) error {
+func (j *JobManager) notifySuccess(jobResult JobWorkerResult, ch chan *amqp.Channel) error {
 	jobJSON, err := json.Marshal(jobResult.Job)
 	if err != nil {
 		return err

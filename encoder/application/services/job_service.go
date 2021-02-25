@@ -8,12 +8,14 @@ import (
 	"strconv"
 )
 
+//JobService do the steps to prepare a video
 type JobService struct {
 	Job           *domain.Job
 	JobRepository repositories.JobRepository
 	VideoService  VideoService
 }
 
+//Start the process to prepare a video
 func (j *JobService) Start() error {
 
 	// DOWNLOADING
