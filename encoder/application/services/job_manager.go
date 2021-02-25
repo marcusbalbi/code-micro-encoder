@@ -41,7 +41,8 @@ func NewJobManager(db *gorm.DB, rabbitMQ *queue.RabbitMQ, jobReturnChannel chan 
 
 }
 
-func (j *JobManager) start(ch chan *amqp.Channel) {
+//Start start taking jobs
+func (j *JobManager) Start(ch *amqp.Channel) {
 	videoService := NewVideoService()
 	videoService.VideoRepository = repositories.VideoRepositoryDb{Db: j.Db}
 
@@ -74,7 +75,7 @@ func (j *JobManager) start(ch chan *amqp.Channel) {
 
 }
 
-func (j *JobManager) notifySuccess(jobResult JobWorkerResult, ch chan *amqp.Channel) error {
+func (j *JobManager) notifySuccess(jobResult JobWorkerResult, ch *amqp.Channel) error {
 	jobJSON, err := json.Marshal(jobResult.Job)
 	if err != nil {
 		return err
