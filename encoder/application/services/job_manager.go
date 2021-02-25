@@ -1,79 +1,91 @@
 package services
 
 import (
+	"encoder/application/repositories"
 	"encoder/domain"
-	utils "encoder/framework/util"
-	"encoding/json"
+	"encoder/framework/queue"
+	"log"
 	"os"
-	"time"
+	"strconv"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/jinzhu/gorm"
 	"github.com/streadway/amqp"
 )
 
-type JobWorkerResult struct {
-	Job     domain.Job
-	Message *amqp.Delivery
-	Error   error
+type JobManager struct {
+	Db               *gorm.DB
+	Domain           domain.Job
+	MessageChannel   chan amqp.Delivery
+	JobReturnChannel chan JobWorkerResult
+	RabbitMQ         *queue.RabbitMQ
 }
 
-func JobWorker(messageChannel chan amqp.Delivery, returnChannel chan JobWorkerResult, jobService jobService, job domain.Job, workerID int) {
-
-	for message := range messageChannel {
-		err := utils.IsJSON(string(message.Body))
-		if err != nil {
-			returnChannel <- returnJobResult(domain.Job{}, message, err)
-			continue
-		}
-
-		err = json.Unmarshal(message.Body, &jobService.VideoService.Video)
-		jobService.VideoService.Video.ID = uuid.NewV4().String()
-		if err != nil {
-			returnChannel <- returnJobResult(domain.Job{}, message, err)
-			continue
-		}
-
-		err = jobService.VideoService.Video.Validate()
-		if err != nil {
-			returnChannel <- returnJobResult(domain.Job{}, message, err)
-			continue
-		}
-
-		err = jobService.VideoService.Video.InsertVideo()
-		if err != nil {
-			returnChannel <- returnJobResult(domain.Job{}, message, err)
-			continue
-		}
-
-		job.Video = jobService.VideoService.Video
-		job.OutputBucketPath = os.Getenv("outputBucketName")
-		job.ID = uuid.NewV4().String()
-		job.Status = "STARTING"
-		job.CreatedAt = time.Now()
-
-		_, err = jobService.JobRepository.Insert(&job)
-		if err != nil {
-			returnChannel <- returnJobResult(domain.Job{}, message, err)
-			continue
-		}
-
-		jobService.Job = &job
-		err = jobService.start()
-		if err != nil {
-			returnChannel <- returnJobResult(domain.Job{}, message, err)
-			continue
-		}
-
-		returnChannel <- returnJobResult(job, message, nil)
-
-	}
+type JobNotificationError struct {
+	Message string `json:"message"`
+	Error   string `json:"error"`
 }
 
-func returnJobResult(job domain.Job, message amqp.Delivery, err error) JobWorkerResult {
-	result := JobWorkerResult{
-		Job:     job,
-		Message: &message,
-		Error:   err,
+func NewJobManager(db *gorm.DB, rabbitMQ *queue.RabbitMQ, jobReturnChannel chan JobWorkerResult, messageChannel chan amqp.Delivery) *JobManager {
+
+	return &JobManager{
+		Db:               db,
+		Domain:           domain.Job{},
+		MessageChannel:   messageChannel,
+		JobReturnChannel: jobReturnChannel,
+		RabbitMQ:         rabbitMQ,
 	}
-	return result
+
+}
+
+func (j *JobManager) start(ch chan *amqp.Channel) {
+	videoService := NewVideoService()
+	videoService.VideoRepository = repositories.VideoRepositoryDb{Db: j.Db}
+
+	jobService := JobService{
+		JobRepository: repositories.JobRepositoryDb{Db: j.Db},
+		VideoService:  videoService,
+	}
+
+	concurrency, err := strconv.Atoi(os.Getenv("CONCURRENCY_WORKERS"))
+
+	if err != nil {
+		log.Fatalf("Error Loading var: CONCURRENCY_WORKERS")
+	}
+
+	for qtdProcess := 0; qtdProcess < concurrency; qtdProcess++ {
+		go JobWorker(j.MessageChannel, j.JobReturnChannel, jobService, j.Domain, qtdProcess)
+	}
+
+	for jobResult := range j.JobReturnChannel {
+		if jobResult.Error != nil {
+			err = j.checkParseErrors(jobResult)
+		} else {
+			err = j.notifySuccess(jobResult, ch)
+		}
+
+		if err != nil {
+			jobResult.Message.Reject(false)
+		}
+	}
+
+}
+
+func (j JobManager) checkParseErrors(jobResult JobWorkerResult) error {
+	if jobResult.Job.ID != "" {
+		log.Printf("MessageID #{jobResult.Message.DeliveryTag}. Error parsing job: #{jobResult.Job.ID}")
+	} else {
+		log.Printf("MessageID #{jobResult.Message.DeliveryTag}. Error parsing message: #{jobResult.Error}")
+	}
+
+	// errorMsg := JobNotificationError{
+	// 	Message: string(jobResult.Message.Body),
+	// 	Error:   jobResult.Error.Error(),
+	// }
+
+	// jobJson, err = json.Marshal(errorMsg)
+
+	// falta implementar a notificação
+
+	return nil
+
 }
