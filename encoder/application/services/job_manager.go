@@ -76,6 +76,12 @@ func (j *JobManager) Start(ch *amqp.Channel) {
 }
 
 func (j *JobManager) notifySuccess(jobResult JobWorkerResult, ch *amqp.Channel) error {
+	/**
+		{
+	 		"resource_id": "e3a42dd6-788b-11eb-9439-0242ac130002",
+	 		"file_path": "convite.mp4"
+	}
+		**/
 	jobJSON, err := json.Marshal(jobResult.Job)
 	if err != nil {
 		return err
@@ -96,9 +102,13 @@ func (j *JobManager) notifySuccess(jobResult JobWorkerResult, ch *amqp.Channel) 
 
 func (j JobManager) checkParseErrors(jobResult JobWorkerResult) error {
 	if jobResult.Job.ID != "" {
-		log.Printf("MessageID #{jobResult.Message.DeliveryTag}. Error parsing job: #{jobResult.Job.ID}")
+		log.Printf("MessageID: %v. Error During the Job: %v whit Video %v. Error: %v ",
+			jobResult.Message.DeliveryTag,
+			jobResult.Job.ID,
+			jobResult.Job.Video.ID,
+			jobResult.Error.Error())
 	} else {
-		log.Printf("MessageID #{jobResult.Message.DeliveryTag}. Error parsing message: #{jobResult.Error}")
+		log.Printf("MessageID: %v. Error Parsing Message: %v", jobResult.Message.DeliveryTag, jobResult.Error.Error())
 	}
 
 	errorMsg := JobNotificationError{
