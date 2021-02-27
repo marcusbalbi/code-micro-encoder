@@ -82,7 +82,10 @@ func (j *JobManager) notifySuccess(jobResult JobWorkerResult, ch *amqp.Channel) 
 	 		"file_path": "convite.mp4"
 	}
 		**/
+	Mutex.Lock()
 	jobJSON, err := json.Marshal(jobResult.Job)
+	Mutex.Unlock()
+
 	if err != nil {
 		return err
 	}
